@@ -2,169 +2,178 @@ package odintui_widgets
 
 import tui ".."
 
-Sparkline_Direction :: enum { Left_To_Right, Right_To_Left }
+Sparkline_Direction :: enum {
+	Left_To_Right,
+	Right_To_Left,
+}
 
+// Sparkline displays a compact bar chart.
+// Mirrors ratatui::widgets::Sparkline.
 Sparkline :: struct {
-    block:               Maybe(Block),
-    data:                []u64,
-    max:                 Maybe(u64),
-    bar_set:             tui.Bar_Set,
-    style:               tui.Style,
-    absent_value_style:  tui.Style,
-    absent_value_symbol: string,
-    direction:           Sparkline_Direction,
+	block:               Maybe(Block),
+	data:                []u64,
+	max:                 Maybe(u64),
+	bar_set:             tui.Bar_Set,
+	style:               tui.Style,
+	absent_value_style:  tui.Style,
+	absent_value_symbol: string,
+	direction:           Sparkline_Direction,
 }
 
 sparkline_new :: proc() -> Sparkline {
-    return Sparkline{
-        bar_set              = tui.NINE_LEVELS,
-        absent_value_symbol  = " ",
-    }
+	return Sparkline {
+		bar_set = tui.NINE_LEVELS,
+		style = tui.style_default(),
+		absent_value_style = tui.style_default(),
+		absent_value_symbol = " ",
+		direction = .Left_To_Right,
+	}
 }
 
 sparkline_block :: proc(s: Sparkline, b: Block) -> Sparkline {
-    s := s
-    s.block = b
-    return s
+	s := s
+	s.block = b
+	return s
 }
 
 sparkline_data :: proc(s: Sparkline, data: []u64) -> Sparkline {
-    s := s
-    s.data = data
-    return s
+	s := s
+	s.data = data
+	return s
 }
 
-sparkline_max :: proc(s: Sparkline, m: u64) -> Sparkline {
-    s := s
-    s.max = m
-    return s
+sparkline_max :: proc(s: Sparkline, max: u64) -> Sparkline {
+	s := s
+	s.max = max
+	return s
 }
 
 sparkline_bar_set :: proc(s: Sparkline, bs: tui.Bar_Set) -> Sparkline {
-    s := s
-    s.bar_set = bs
-    return s
+	s := s
+	s.bar_set = bs
+	return s
 }
 
 sparkline_style :: proc(s: Sparkline, st: tui.Style) -> Sparkline {
-    s := s
-    s.style = st
-    return s
+	s := s
+	s.style = st
+	return s
 }
 
-sparkline_absent_value_style :: proc(
-    s: Sparkline, st: tui.Style,
-) -> Sparkline {
-    s := s
-    s.absent_value_style = st
-    return s
+sparkline_absent_value_style :: proc(s: Sparkline, st: tui.Style) -> Sparkline {
+	s := s
+	s.absent_value_style = st
+	return s
 }
 
-sparkline_absent_value_symbol :: proc(
-    s: Sparkline, sym: string,
-) -> Sparkline {
-    s := s
-    s.absent_value_symbol = sym
-    return s
+sparkline_absent_value_symbol :: proc(s: Sparkline, sym: string) -> Sparkline {
+	s := s
+	s.absent_value_symbol = sym
+	return s
 }
 
-sparkline_direction :: proc(
-    s: Sparkline, d: Sparkline_Direction,
-) -> Sparkline {
-    s := s
-    s.direction = d
-    return s
-}
-
-// _bar_symbol picks one of 9 levels (empty … full).
-_bar_symbol :: proc(bs: tui.Bar_Set, level: int) -> string {
-    switch level {
-    case 0:  return bs.empty
-    case 1:  return bs.one
-    case 2:  return bs.two
-    case 3:  return bs.three
-    case 4:  return bs.four
-    case 5:  return bs.five
-    case 6:  return bs.six
-    case 7:  return bs.seven
-    case 8:  return bs.full
-    }
-    return bs.full
-}
-
-sparkline_render :: proc(s: Sparkline, area: tui.Rect, buf: ^tui.Buffer) {
-    inner := area
-    if b, ok := s.block.?; ok {
-        block_render(b, area, buf)
-        inner = block_inner(b, area)
-    }
-    if tui.rect_is_empty(inner) { return }
-
-    tui.buffer_set_style(buf, inner, s.style)
-
-    w    := int(inner.width)
-    h    := int(inner.height)
-    data := s.data
-
-    // Compute effective max
-    eff_max: u64 = 1
-    if m, ok := s.max.?; ok {
-        eff_max = max(m, 1)
-    } else {
-        for v in data {
-            if v > eff_max { eff_max = v }
-        }
-        if eff_max == 0 { eff_max = 1 }
-    }
-
-    levels := h * 8 // total sub-row levels
-
-    for col in 0..<w {
-        // data index depends on direction
-        data_idx: int
-        if s.direction == .Left_To_Right {
-            data_idx = len(data) - w + col
-        } else {
-            data_idx = w - 1 - col
-        }
-
-        if data_idx < 0 || data_idx >= len(data) {
-            // absent value
-            cy := inner.y + u16(h) - 1
-            c  := tui.buffer_cell(buf, inner.x + u16(col), cy)
-            if c != nil {
-                c.symbol = s.absent_value_symbol
-                c.style  = s.absent_value_style
-            }
-            continue
-        }
-
-        v := data[data_idx]
-        // total sub-levels for this value
-        filled := int(u64(levels) * v / eff_max)
-
-        for row in 0..<h {
-            // row 0 is bottom
-            bottom_row := h - 1 - row
-            cy := inner.y + u16(bottom_row)
-            cx := inner.x + u16(col)
-            c  := tui.buffer_cell(buf, cx, cy)
-            if c == nil { continue }
-
-            row_filled := filled - row * 8
-            level      := clamp(row_filled, 0, 8)
-
-            c.symbol = _bar_symbol(s.bar_set, level)
-            c.style  = s.style
-        }
-    }
+sparkline_direction :: proc(s: Sparkline, d: Sparkline_Direction) -> Sparkline {
+	s := s
+	s.direction = d
+	return s
 }
 
 sparkline_widget :: proc(s: ^Sparkline) -> tui.Widget {
-    return tui.Widget{
-        data   = s,
-        render = proc(data: rawptr, area: tui.Rect, buf: ^tui.Buffer) {
-            sparkline_render((^Sparkline)(data)^, area, buf)
-        },
-    }
+	return tui.Widget{variant = s, render = sparkline_render}
+}
+
+@(private)
+sparkline_render :: proc(widget: rawptr, area: tui.Rect, buf: ^tui.Buffer) {
+	s := cast(^Sparkline)widget
+
+	render_area := area
+	if block, ok := s.block.?; ok {
+		block_render(&block, area, buf)
+		render_area = block_inner(block, area)
+	}
+
+	if render_area.width < 1 || render_area.height < 1 {
+		return
+	}
+	if len(s.data) == 0 {
+		return
+	}
+
+	// Determine max value
+	max_val := u64(0)
+	if m, ok := s.max.?; ok {
+		max_val = m
+	} else {
+		for v in s.data {
+			if v > max_val {
+				max_val = v
+			}
+		}
+	}
+
+	if max_val == 0 {
+		max_val = 1 // avoid division by zero
+	}
+
+	// Bar set has 9 levels (full, seven, six, five, four, three, two, one, empty)
+	levels := 8 // 0-7 index into bar symbols
+
+	// Render sparkline
+	width := int(render_area.width)
+	data_len := len(s.data)
+
+	for col in 0 ..< width {
+		if col >= data_len {
+			break
+		}
+
+		// Get data index based on direction
+		data_idx := col
+		if s.direction == .Right_To_Left {
+			data_idx = data_len - 1 - col
+		}
+
+		value := s.data[data_idx]
+
+		// Calculate bar level (0-8)
+		level := int((f64(value) / f64(max_val)) * f64(levels))
+		level = clamp(level, 0, levels)
+
+		// Select symbol
+		symbol := ""
+		bar_style := s.style
+
+		switch level {
+		case 8:
+			symbol = s.bar_set.full
+		case 7:
+			symbol = s.bar_set.seven
+		case 6:
+			symbol = s.bar_set.six
+		case 5:
+			symbol = s.bar_set.five
+		case 4:
+			symbol = s.bar_set.four
+		case 3:
+			symbol = s.bar_set.three
+		case 2:
+			symbol = s.bar_set.two
+		case 1:
+			symbol = s.bar_set.one
+		case 0:
+			symbol = s.absent_value_symbol
+			bar_style = s.absent_value_style
+		}
+
+		// Render for all rows in height
+		for row in 0 ..< render_area.height {
+			tui.buffer_set_cell(
+				buf,
+				render_area.x + u16(col),
+				render_area.y + row,
+				symbol,
+				bar_style,
+			)
+		}
+	}
 }
