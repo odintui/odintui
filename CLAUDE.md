@@ -2,7 +2,6 @@
 
 ## Цель
 Создать TUI фреймворк на Odin, максимально совместимый с ratatui (Rust).
-Главная задача: портировать https://github.com/psmux/pstop с Rust на Odin.
 
 ## Текущий статус
 
@@ -37,7 +36,7 @@
   - Исправлено создание Widget для List и Table
 
 ### ⏳ В работе
-**Ничего** — все компилируется и собирается без ошибок!
+**Документация** 
 
 **Проверено:**
 - ✅ example/main.odin
@@ -52,12 +51,6 @@
 - Unicode rendering (gauge sub-blocks, sparkline bars)
 - Scroll и selection в List/Table
 - Popup окна через centered_rect
-
-**Приоритет 3: Порт pstop**
-- Event loop pattern
-- Keyboard navigation (hjkl, arrows, F-keys)
-- Process table с real-time updates
-- Модальные окна (kill, filter, sort)
 
 ## Архитектура
 
@@ -114,6 +107,4 @@ https://github.com/odintui/odintui
 
 ## API Compatibility
 
-Полное руководство по портированию: [API_COMPATIBILITY.md](API_COMPATIBILITY.md)
-
-**Гарантия:** Любой код на ratatui портируется механически. Если нашли несовместимость — это баг!
+Руководство по портированию: [API.md](API.md)
