@@ -1,14 +1,14 @@
 # odintui — Процесс реализации
 
-TUI фреймворк на Odin, совместимый с ratatui. Цель: портировать pstop с Rust на Odin.
+TUI фреймворк на Odin, совместимый с ratatui. Цель: портировать любые TUI утилиты с Rust на Odin.
 
 ---
 
 ## Главная идея
 
-**Проблема:** Нет TUI фреймворка для Odin. Хочу портировать pstop (Rust) на Odin.
+**Проблема:** Нет TUI фреймворка для Odin. Хочу портировать Rust TUI утилиты (pstop, bottom, gitui и др.) на Odin.
 
-**Решение:** Создать odintui — максимально совместимый с ratatui API. Тогда порт будет механическим: те же концепции, те же имена функций, только синтаксис Odin.
+**Решение:** Создать odintui — максимально совместимый с ratatui API. Тогда порт будет механическим: те же концепции, те же имена функций, только синтаксис Odin. Любая утилита на ratatui может быть портирована с минимальными изменениями.
 
 **Философия:**
 - Builder pattern для всех виджетов (как в ratatui)
@@ -16,6 +16,7 @@ TUI фреймворк на Odin, совместимый с ratatui. Цель: �
 - Constraint-based layout system
 - Double buffering с diff-based rendering
 - Платформенная независимость через backend abstraction
+- **API совместимость:** любой код на ratatui портируется механически
 
 ---
 
@@ -1054,3 +1055,66 @@ rects := tui.layout_split(layout, area)
 - ✅ Все 4 примера работают
 
 Теперь можно запускать примеры и тестировать виджеты в реальном терминале!
+
+---
+
+## Применение
+
+**odintui позволяет портировать любые TUI утилиты на ratatui:**
+
+Примеры популярных утилит, которые можно портировать:
+- **pstop** — process monitor (изначальная цель)
+- **bottom** — system monitor (htop alternative)
+- **gitui** — terminal UI for git
+- **spotify-tui** — Spotify client
+- **bandwhich** — network utilization monitor
+- **ytop** — system monitor
+- **kdash** — Kubernetes dashboard
+- **oxker** — Docker container manager
+
+Благодаря API совместимости, портирование сводится к:
+1. Замене `use ratatui::*` на `import tui "../odintui"`
+2. Адаптации синтаксиса Rust → Odin
+3. Замене Rust-специфичных конструкций (async, traits) на Odin эквиваленты
+
+**Основной код остается идентичным** — те же виджеты, тот же layout, те же паттерны.
+
+
+---
+
+## API Compatibility Guarantee
+
+**Обещание:** Любой код на ratatui портируется механически с минимальными изменениями.
+
+Полное руководство: [API_COMPATIBILITY.md](API_COMPATIBILITY.md)
+
+### Пример портирования
+
+**Rust (ratatui):**
+```rust
+let table = Table::new(rows, widths)
+    .header(header_row)
+    .block(Block::bordered().title("Processes"))
+    .highlight_symbol(">> ");
+frame.render_stateful_widget(table, area, &mut state);
+```
+
+**Odin (odintui):**
+```odin
+table := w.table_new(rows, widths)
+table = w.table_header(table, header_row)
+block := w.block_new()
+block = w.block_borders(block, w.BORDERS_ALL)
+block = w.block_title(block, "Processes")
+table = w.table_block(table, block)
+table = w.table_highlight_symbol(table, ">> ")
+tui.frame_render_widget(f, w.table_widget(&table, &state), area)
+```
+
+**Изменения:** только синтаксис. Логика идентична.
+
+### Если нашли несовместимость
+
+Это баг! Создайте issue с примером кода из ratatui, который не портируется механически.
+
+**Цель проекта:** 100% API совместимость с ratatui.

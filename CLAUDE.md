@@ -111,3 +111,9 @@ odin build example/widgets_demo.odin -file -out:example/widgets_demo.exe
 
 ## GitHub
 https://github.com/odintui/odintui
+
+## API Compatibility
+
+Полное руководство по портированию: [API_COMPATIBILITY.md](API_COMPATIBILITY.md)
+
+**Гарантия:** Любой код на ratatui портируется механически. Если нашли несовместимость — это баг!
