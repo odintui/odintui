@@ -65,7 +65,7 @@ gauge_use_unicode :: proc(g: Gauge, v: bool) -> Gauge {
 }
 
 gauge_widget :: proc(g: ^Gauge) -> tui.Widget {
-	return tui.Widget{variant = g, render = gauge_render}
+	return tui.Widget{data = g, render = gauge_render}
 }
 
 @(private)
@@ -75,7 +75,7 @@ gauge_render :: proc(widget: rawptr, area: tui.Rect, buf: ^tui.Buffer) {
 	render_area := area
 	if block, ok := g.block.?; ok {
 		block_render(&block, area, buf)
-		render_area = block_inner(block, area)
+		render_area = block_inner(&block, area)
 	}
 
 	if render_area.width < 1 || render_area.height < 1 {
@@ -112,7 +112,8 @@ gauge_render :: proc(widget: rawptr, area: tui.Rect, buf: ^tui.Buffer) {
 		if g.use_unicode && filled < int(render_area.width) && fraction > 0.0 {
 			idx := int(fraction * 8.0)
 			if idx > 0 && idx <= 8 {
-				symbol := tui.GAUGE_BLOCKS[idx - 1]
+				blocks := tui.GAUGE_BLOCKS
+				symbol := blocks[idx - 1]
 				tui.buffer_set_cell(
 					buf,
 					render_area.x + u16(filled),

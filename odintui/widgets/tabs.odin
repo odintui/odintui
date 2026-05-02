@@ -54,7 +54,7 @@ tabs_divider :: proc(t: Tabs, div: string) -> Tabs {
 }
 
 tabs_widget :: proc(t: ^Tabs) -> tui.Widget {
-	return tui.Widget{variant = t, render = tabs_render}
+	return tui.Widget{data = t, render = tabs_render}
 }
 
 @(private)
@@ -64,7 +64,7 @@ tabs_render :: proc(widget: rawptr, area: tui.Rect, buf: ^tui.Buffer) {
 	render_area := area
 	if block, ok := t.block.?; ok {
 		block_render(&block, area, buf)
-		render_area = block_inner(block, area)
+		render_area = block_inner(&block, area)
 	}
 
 	if render_area.width < 1 || render_area.height < 1 {

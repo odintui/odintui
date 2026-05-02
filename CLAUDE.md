@@ -1,70 +1,113 @@
-# odintui
+# odintui — План работы
 
-Odin-язычный TUI фреймворк, аналог ratatui (Rust). Цель — максимальная совместимость с ratatui API.
+## Цель
+Создать TUI фреймворк на Odin, максимально совместимый с ratatui (Rust).
+Главная задача: портировать https://github.com/psmux/pstop с Rust на Odin.
 
-## Мотивация
+## Текущий статус
 
-Нужен для переписывания https://github.com/psmux/pstop на Odin.
-Единственный блокер pstop → Odin это отсутствие TUI фреймворка.
+### ✅ Готово
+- Ядро: Buffer, Layout, Style, Text, Frame, Terminal
+- Backend: Windows (Win32) + POSIX (termios)
+- Базовые виджеты: Block, Paragraph
+- Все виджеты для pstop:
+  - Gauge (прогресс-бары)
+  - Sparkline (компактные графики)
+  - Tabs (вкладки)
+  - List + State (списки с selection)
+  - Table + State (таблицы — ключевой виджет)
+  - BarChart (bar charts)
+- **Events system:**
+  - events.odin — общий интерфейс (Key, Mouse, Resize, Focus, Paste)
+  - events_windows.odin — ReadConsoleInput (Win32)
+  - events_posix.odin — read() + ANSI escape parsing
+  - event_poll, event_read API
+- **Event loop integration:**
+  - terminal_run — event loop с user_data
+  - terminal_run_simple — event loop с closures
+- Helpers: centered_rect, rune_to_string, format_u64, style helpers
+- Примеры: basic demo + interactive demo + counter demo
+- **Все ошибки компиляции исправлены:**
+  - Сигнатуры block_render и block_inner (принимают ^Block)
+  - Добавлена buffer_set_cell для установки одной ячейки
+  - Перегрузка text_width для string и Text
+  - Исправлена индексация GAUGE_BLOCKS
+  - Добавлены #partial switch
+  - Исправлены проверки span.style
+  - Исправлено создание Widget для List и Table
 
-## Структура
+### ⏳ В работе
+**Ничего** — все компилируется и собирается без ошибок!
 
+**Проверено:**
+- ✅ example/main.odin
+- ✅ example/counter.odin  
+- ✅ example/interactive.odin
+- ✅ example/widgets_demo.odin
+
+### 📋 Следующие шаги
+
+**Приоритет 1: Тестирование**
+- Проверить все виджеты в реальном терминале
+- Unicode rendering (gauge sub-blocks, sparkline bars)
+- Scroll и selection в List/Table
+- Popup окна через centered_rect
+
+**Приоритет 3: Порт pstop**
+- Event loop pattern
+- Keyboard navigation (hjkl, arrows, F-keys)
+- Process table с real-time updates
+- Модальные окна (kill, filter, sort)
+
+## Архитектура
+
+### Ключевые решения
+- **No circular imports**: backend не импортирует odintui
+- **Widget vtable**: `{data: rawptr, render: proc(...)}`
+- **Builder pattern**: все setters возвращают копию
+- **Stateful widgets**: отдельные State структуры
+- **Platform code**: file suffixes (`_windows.odin`, `_posix.odin`)
+
+### Структура
 ```
-odintui/          -- основной пакет (library)
-  buffer.odin     -- Cell, Buffer, diff
-  layout.odin     -- Rect, Direction, Constraint, Layout, layout_split
-  style.odin      -- Color, Modifier, Style, style_patch
-  text.odin       -- Span, Line, Text
-  symbols.odin    -- Border_Set, bar chars (BORDER_PLAIN/ROUNDED/DOUBLE/THICK)
-  frame.odin      -- Widget (vtable), Frame, frame_render_widget
-  terminal.odin   -- Terminal, terminal_draw, init, restore
+odintui/
+├── [core files]         # buffer, layout, style, text, frame, terminal
+├── backend/             # crossterm (ANSI + platform-specific)
+└── widgets/             # block, paragraph, gauge, sparkline, tabs, list, table, barchart
 
-  backend/
-    backend.odin           -- Backend vtable, Draw_Cell, Ansi_Color (нет импорта родителя)
-    crossterm.odin         -- общий ANSI код, Crossterm_Backend
-    crossterm_windows.odin -- Win32 raw mode, GetConsoleScreenBufferInfo
-    crossterm_posix.odin   -- termios raw mode, TIOCGWINSZ (#+build linux, darwin)
-
-  widgets/
-    block.odin      -- Block, Borders, block_inner, block_render
-    paragraph.odin  -- Paragraph, wrap, scroll
+example/
+├── main.odin           # базовый пример
+└── widgets_demo.odin   # демо всех виджетов
 ```
 
-## Ключевые архитектурные решения
+## Совместимость с ratatui
 
-- **Нет циклических импортов**: `backend` пакет не импортирует `odintui`.
-  Вместо этого `backend.Draw_Cell` — независимый тип, `terminal.odin` конвертирует
-  через `_cell_to_draw` / `_color_to_ansi`.
-- **Платформенный код** через file suffixes (`_windows.odin`, `_posix.odin`),
-  не через `when ODIN_OS` с импортами внутри (компилятор запрещает).
-- **Widget** — vtable-struct `{data: rawptr, render: proc(...)}` вместо интерфейса.
-- **Double buffer + diff flush** — как в ratatui: рендер в `current`, diff с `previous`,
-  только изменившиеся ячейки идут в backend.
-- **Backend.size** возвращает `[2]u16` (не Rect) чтобы не тянуть типы родителя.
+Rust код:
+```rust
+let table = Table::new(rows, widths)
+    .header(header_row)
+    .block(Block::bordered().title("Processes"))
+    .highlight_symbol(">> ");
+frame.render_stateful_widget(table, area, &mut state);
+```
 
-## Что сделано
-
-- [x] Ядро: Buffer, Layout, Style, Text, Frame, Terminal
-- [x] Backend: Windows + POSIX
-- [x] Widgets: Block, Paragraph
-- [x] example/main.odin — собирается и линкуется
-
-## Что делать дальше
-
-- [ ] events.odin — ввод клавиатуры и мыши (ReadConsoleInput / read)
-- [ ] widgets/list.odin
-- [ ] widgets/table.odin
-- [ ] widgets/gauge.odin
-- [ ] widgets/sparkline.odin
-- [ ] widgets/barchart.odin
-- [ ] Проверить example в реальном терминале
+Odin код (механический перенос):
+```odin
+t := w.table_new(rows[:], widths[:])
+t  = w.table_header(t, header_row)
+b := w.block_new()
+b  = w.block_title(b, "Processes")
+b  = w.block_borders(b, w.BORDERS_ALL)
+t  = w.table_block(t, b)
+t  = w.table_highlight_symbol(t, ">> ")
+tui.frame_render_widget(f, w.table_widget(&t, &state), area)
+```
 
 ## Сборка
-
-```
+```bash
 odin build example -out:example/demo.exe
+odin build example/widgets_demo.odin -file -out:example/widgets_demo.exe
 ```
 
 ## GitHub
-
 https://github.com/odintui/odintui
